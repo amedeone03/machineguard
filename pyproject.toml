@@ -3,4 +3,8 @@ name = "machineguard"
 version = "0.1.0"
 description = "Predictive maintenance and MLOps platform using the NASA IMS bearing dataset"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "numpy",
+    "pandas",
+    "matplotlib",
+]
