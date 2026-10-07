@@ -1,9 +1,12 @@
-# Python
+# Python cache
 __pycache__/
 *.py[cod]
 
 # Virtual environment
 .venv/
+
+# Python package metadata
+*.egg-info/
 
 # Jupyter
 .ipynb_checkpoints/
