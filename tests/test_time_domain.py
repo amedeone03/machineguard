@@ -1,6 +1,11 @@
 import numpy as np
 
-from machineguard.features.time_domain import compute_rms, compute_std, compute_peak
+from machineguard.features.time_domain import (
+    compute_rms,
+    compute_std,
+    compute_peak,
+    compute_crest_factor,
+)
 
 def test_compute_rms():
     signal = np.array([0.2, -0.2, 0.2, -0.2])
@@ -22,3 +27,17 @@ def test_compute_peak():
     result = compute_peak(signal)
 
     assert np.isclose(result, 0.8)
+
+def test_compute_crest_factor():
+    signal = np.array([1.0, -1.0, 1.0, -1.0])
+
+    result = compute_crest_factor(signal)
+
+    assert np.isclose(result, 1.0)
+
+def test_compute_crest_factor_zero_signal():
+    signal = np.array([0.0, 0.0, 0.0])
+
+    result = compute_crest_factor(signal)
+
+    assert result == 0.0
