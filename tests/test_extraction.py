@@ -25,10 +25,24 @@ def test_extract_snapshot_features(tmp_path):
         channel_index=0,
     )
 
+    assert set(features.keys()) == {
+        "rms",
+        "std",
+        "peak",
+        "crest_factor",
+        "kurtosis",
+        "dominant_frequency",
+        "spectral_energy",
+        "timestamp",
+    }
+
     assert np.isclose(features["rms"], 1.0)
     assert np.isclose(features["std"], 1.0)
     assert np.isclose(features["peak"], 1.0)
     assert np.isclose(features["crest_factor"], 1.0)
+
+    assert np.isclose(features["dominant_frequency"], 10_000.0)
+    assert np.isclose(features["spectral_energy"], 16.0)
 
     assert features["timestamp"] == pd.Timestamp(
         "2003-10-22 12:06:24"

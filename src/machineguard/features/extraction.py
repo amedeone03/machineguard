@@ -3,9 +3,17 @@ from pathlib import Path
 import pandas as pd
 
 from machineguard.features.time_domain import extract_time_features
+from machineguard.features.frequency_domain import (
+    compute_dominant_frequency,
+    compute_spectral_energy,
+)
 
 
-def extract_snapshot_features(file_path, channel_index):
+def extract_snapshot_features(
+    file_path,
+    channel_index,
+    sampling_rate=20_000,
+):
     file_path = Path(file_path)
 
     snapshot = pd.read_csv(
@@ -17,6 +25,13 @@ def extract_snapshot_features(file_path, channel_index):
     signal = snapshot.iloc[:, channel_index]
 
     features = extract_time_features(signal)
+
+    features["dominant_frequency"] = compute_dominant_frequency(
+        signal,
+        sampling_rate,
+    )
+
+    features["spectral_energy"] = compute_spectral_energy(signal)
 
     features["timestamp"] = pd.to_datetime(
         file_path.name,
