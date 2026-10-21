@@ -12,6 +12,7 @@ dependencies = [
     "pandas",
     "matplotlib",
     "scipy",
+    "scikit-learn",
 ]
 
 [tool.setuptools]
