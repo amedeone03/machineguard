@@ -15,6 +15,9 @@ dependencies = [
     "scikit-learn",
     "psycopg[binary]",
     "mlflow",
+    "fastapi",
+    "uvicorn",
+    "httpx",
 ]
 
 [tool.setuptools]

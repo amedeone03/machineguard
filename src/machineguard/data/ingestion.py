@@ -78,3 +78,34 @@ def ingest_feature_csv(
             dominant_frequency=row["dominant_frequency"],
             spectral_energy=row["spectral_energy"],
         )
+
+def update_measurement_prediction(
+    bearing_id,
+    timestamp,
+    anomaly_score,
+    anomaly_flag,
+):
+    query = """
+        UPDATE measurements
+        SET
+            anomaly_score = %s,
+            anomaly_flag = %s
+        WHERE
+            bearing_id = %s
+            AND timestamp = %s;
+    """
+
+    values = (
+        anomaly_score,
+        anomaly_flag,
+        bearing_id,
+        timestamp,
+    )
+
+    with get_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(query, values)
+
+            updated_rows = cursor.rowcount
+
+    return updated_rows
