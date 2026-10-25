@@ -17,3 +17,7 @@ __pycache__/
 # Raw datasets
 data/raw/*
 !data/raw/.gitkeep
+
+# MLflow local tracking
+mlflow.db
+mlruns/
