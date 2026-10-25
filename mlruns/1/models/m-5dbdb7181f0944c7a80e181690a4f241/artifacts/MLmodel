@@ -1,0 +1,15 @@
+artifact_path: /Users/ameboz/machineguard/mlruns/1/models/m-5dbdb7181f0944c7a80e181690a4f241/artifacts
+flavors:
+  sklearn:
+    code: null
+    pickled_model: model.skops
+    serialization_format: skops
+    sklearn_version: 1.9.1
+    skops_trusted_types: null
+mlflow_version: 3.17.2
+model_id: m-5dbdb7181f0944c7a80e181690a4f241
+model_size_bytes: 7487
+model_uuid: m-5dbdb7181f0944c7a80e181690a4f241
+prompts: null
+run_id: 014bebbbf7ec427488cd6668f59f6c93
+utc_time_created: '2026-10-25 18:06:03.717441'
