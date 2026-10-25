@@ -13,6 +13,7 @@ dependencies = [
     "matplotlib",
     "scipy",
     "scikit-learn",
+    "psycopg[binary]",
 ]
 
 [tool.setuptools]
