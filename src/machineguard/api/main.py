@@ -1,4 +1,5 @@
 from datetime import datetime
+from functools import lru_cache
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -37,7 +38,9 @@ class PredictionResponse(BaseModel):
     status: str
 
 
-model, scaler, threshold = load_inference_pipeline()
+@lru_cache
+def get_inference_pipeline():
+    return load_inference_pipeline()
 
 
 @app.get("/health")
@@ -62,6 +65,8 @@ def predict(request: PredictionRequest):
         "dominant_frequency": request.dominant_frequency,
         "spectral_energy": request.spectral_energy,
     }
+
+    model, scaler, threshold = get_inference_pipeline()
 
     prediction = predict_anomaly(
         features=features,

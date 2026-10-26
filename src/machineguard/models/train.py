@@ -77,7 +77,7 @@ if __name__ == "__main__":
     threshold_percentile = 5
 
     mlflow.set_experiment(
-        "machineguard-isolation-forest"
+    "machineguard-isolation-forest-serving"
     )
 
     with mlflow.start_run():

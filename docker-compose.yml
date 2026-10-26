@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:18
+
+    environment:
+      POSTGRES_DB: machineguard
+      POSTGRES_USER: machineguard
+      POSTGRES_PASSWORD: machineguard
+
+    ports:
+      - "5433:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./src/machineguard/database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+
+  api:
+    build: .
+
+    ports:
+      - "8000:8000"
+
+    environment:
+      MLFLOW_TRACKING_URI: http://host.docker.internal:5001
+
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: machineguard
+      DB_USER: machineguard
+      DB_PASSWORD: machineguard
+
+    depends_on:
+      - postgres
+
+
+volumes:
+  postgres_data:

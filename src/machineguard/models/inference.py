@@ -8,7 +8,7 @@ import pandas as pd
 from machineguard.models.train import ML_FEATURES
 
 
-EXPERIMENT_NAME = "machineguard-isolation-forest"
+EXPERIMENT_NAME = "machineguard-isolation-forest-serving"
 
 
 def get_latest_run():
