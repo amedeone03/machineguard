@@ -21,3 +21,4 @@ data/raw/*
 # MLflow local tracking
 mlflow.db
 mlruns/
+mlartifacts/
