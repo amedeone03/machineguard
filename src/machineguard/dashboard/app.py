@@ -2,6 +2,10 @@ import altair as alt
 import streamlit as st
 
 from machineguard.dashboard.data import load_measurements
+from machineguard.dashboard.api_client import (
+    check_api_health,
+    predict_anomaly,
+)
 
 
 ANOMALY_THRESHOLD = -0.06108184766069839
@@ -21,6 +25,121 @@ st.write(
     "Monitoring bearing condition using NASA IMS vibration data."
 )
 
+
+# ---------------------------------------------------------
+# API status and live prediction
+# ---------------------------------------------------------
+
+st.subheader("Live prediction")
+
+try:
+    health = check_api_health()
+
+    st.success(
+        f"API status: {health['status']}"
+    )
+
+except Exception as exc:
+    st.error(
+        f"API unavailable: {exc}"
+    )
+
+
+with st.form("prediction_form"):
+    col1, col2 = st.columns(2)
+
+    with col1:
+        rms = st.number_input(
+            "RMS",
+            value=0.063,
+            format="%.6f",
+        )
+
+        std = st.number_input(
+            "Standard deviation",
+            value=0.063,
+            format="%.6f",
+        )
+
+        peak = st.number_input(
+            "Peak",
+            value=0.36,
+            format="%.6f",
+        )
+
+        crest_factor = st.number_input(
+            "Crest factor",
+            value=5.7,
+            format="%.6f",
+        )
+
+    with col2:
+        kurtosis = st.number_input(
+            "Kurtosis",
+            value=3.4,
+            format="%.6f",
+        )
+
+        dominant_frequency = st.number_input(
+            "Dominant frequency",
+            value=45.0,
+            format="%.2f",
+        )
+
+        spectral_energy = st.number_input(
+            "Spectral energy",
+            value=100.0,
+            format="%.2f",
+        )
+
+    submitted = st.form_submit_button(
+        "Predict bearing condition"
+    )
+
+
+if submitted:
+    features = {
+        "rms": rms,
+        "std": std,
+        "peak": peak,
+        "crest_factor": crest_factor,
+        "kurtosis": kurtosis,
+        "dominant_frequency": dominant_frequency,
+        "spectral_energy": spectral_energy,
+    }
+
+    try:
+        prediction = predict_anomaly(features)
+
+        result_col1, result_col2, result_col3 = st.columns(3)
+
+        result_col1.metric(
+            "Status",
+            prediction["status"],
+        )
+
+        result_col2.metric(
+            "Anomaly score",
+            f"{prediction['anomaly_score']:.4f}",
+        )
+
+        result_col3.metric(
+            "Anomaly flag",
+            str(prediction["anomaly_flag"]),
+        )
+
+    except Exception as exc:
+        st.error(
+            f"Prediction failed: {exc}"
+        )
+
+
+st.divider()
+
+
+# ---------------------------------------------------------
+# Historical measurements
+# ---------------------------------------------------------
 
 measurements = load_measurements()
 
@@ -163,6 +282,7 @@ if filtered_measurements.empty:
     st.info(
         "No measurements are available for the selected date range."
     )
+
 else:
     st.line_chart(
         filtered_measurements,

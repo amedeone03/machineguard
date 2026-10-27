@@ -1,24 +1,25 @@
 import pandas as pd
 
-from machineguard.database.connection import get_connection
+from machineguard.dashboard.api_client import API_BASE_URL
+
+import httpx
 
 
 def load_measurements():
-    query = """
-        SELECT
-            timestamp,
-            rms,
-            std,
-            peak,
-            crest_factor,
-            kurtosis,
-            dominant_frequency,
-            spectral_energy,
-            anomaly_score,
-            anomaly_flag
-        FROM measurements
-        ORDER BY timestamp;
-    """
+    response = httpx.get(
+        f"{API_BASE_URL}/measurements",
+        timeout=30.0,
+    )
 
-    with get_connection() as connection:
-        return pd.read_sql(query, connection)
+    response.raise_for_status()
+
+    measurements = response.json()
+
+    dataframe = pd.DataFrame(measurements)
+
+    if not dataframe.empty:
+        dataframe["timestamp"] = pd.to_datetime(
+            dataframe["timestamp"]
+        )
+
+    return dataframe

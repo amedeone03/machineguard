@@ -4,6 +4,7 @@ from functools import lru_cache
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from machineguard.database.connection import get_connection
 from machineguard.data.ingestion import (
     update_measurement_prediction,
 )
@@ -49,6 +50,43 @@ def health():
         "status": "ok",
         "service": "machineguard",
     }
+
+
+@app.get("/measurements")
+def get_measurements():
+    query = """
+        SELECT
+            timestamp,
+            rms,
+            std,
+            peak,
+            crest_factor,
+            kurtosis,
+            dominant_frequency,
+            spectral_energy,
+            anomaly_score,
+            anomaly_flag
+        FROM measurements
+        ORDER BY timestamp;
+    """
+
+    with get_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+
+            columns = [
+                description.name
+                for description in cursor.description
+            ]
+
+            rows = cursor.fetchall()
+
+    measurements = [
+        dict(zip(columns, row))
+        for row in rows
+    ]
+
+    return measurements
 
 
 @app.post(
