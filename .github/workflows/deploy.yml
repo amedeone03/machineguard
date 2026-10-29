@@ -2,6 +2,9 @@ name: Deploy to AWS
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
   id-token: write
@@ -11,9 +14,14 @@ env:
   AWS_REGION: eu-north-1
   ECR_REPOSITORY: machineguard
   ECS_CLUSTER: machineguard-cluster
-  ECS_SERVICE: machineguard-api-service
-  ECS_TASK_DEFINITION: machineguard-api
-  CONTAINER_NAME: api
+
+  API_SERVICE: machineguard-api-service
+  API_TASK_DEFINITION: machineguard-api
+  API_CONTAINER_NAME: api
+
+  DASHBOARD_SERVICE: machineguard-dashboard-service
+  DASHBOARD_TASK_DEFINITION: machineguard-dashboard
+  DASHBOARD_CONTAINER_NAME: dashboard
 
 jobs:
   deploy:
@@ -56,26 +64,58 @@ jobs:
 
           echo "image=$IMAGE_URI" >> "$GITHUB_OUTPUT"
 
-      - name: Download current ECS task definition
+      # ---------------------------------------------------
+      # FastAPI
+      # ---------------------------------------------------
+
+      - name: Download current API task definition
         run: |
           aws ecs describe-task-definition \
-            --task-definition $ECS_TASK_DEFINITION \
+            --task-definition $API_TASK_DEFINITION \
             --query taskDefinition \
-            > task-definition.json
+            > api-task-definition.json
 
-      - name: Render new image in ECS task definition
-        id: render-task-definition
+      - name: Render API task definition
+        id: render-api
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: task-definition.json
-          container-name: ${{ env.CONTAINER_NAME }}
+          task-definition: api-task-definition.json
+          container-name: ${{ env.API_CONTAINER_NAME }}
           image: ${{ steps.build-image.outputs.image }}
 
-      - name: Deploy to Amazon ECS
+      - name: Deploy API to Amazon ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
-          task-definition: ${{ steps.render-task-definition.outputs.task-definition }}
-          service: ${{ env.ECS_SERVICE }}
+          task-definition: ${{ steps.render-api.outputs.task-definition }}
+          service: ${{ env.API_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+          wait-max-delay-seconds: 15
+
+      # ---------------------------------------------------
+      # Streamlit dashboard
+      # ---------------------------------------------------
+
+      - name: Download current dashboard task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition $DASHBOARD_TASK_DEFINITION \
+            --query taskDefinition \
+            > dashboard-task-definition.json
+
+      - name: Render dashboard task definition
+        id: render-dashboard
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: dashboard-task-definition.json
+          container-name: ${{ env.DASHBOARD_CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy dashboard to Amazon ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-dashboard.outputs.task-definition }}
+          service: ${{ env.DASHBOARD_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
           wait-max-delay-seconds: 15
