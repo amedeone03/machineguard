@@ -22,20 +22,9 @@ MachineGuard includes the complete workflow from raw sensor data to a deployed m
 
 ## Demo
 
-MachineGuard is deployed on AWS and can be used through the Streamlit monitoring dashboard.
+MachineGuard running end-to-end on AWS:
 
-The short demo below shows:
-
-- the deployed dashboard
-- API connectivity
-- current bearing health
-- historical vibration data
-- anomaly-score evolution
-- live anomaly prediction
-
-[▶ Watch the MachineGuard demo](docs/demo-machineguard.mov)
-
-> The demo shows the production version of MachineGuard running through the AWS Application Load Balancer.
+![MachineGuard demo](docs/machineguard-demo.gif)
 
 ---
 
