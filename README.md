@@ -96,7 +96,7 @@ The dashboard is served through an AWS Application Load Balancer and communicate
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TD
 
     User[Browser]
 
@@ -121,6 +121,11 @@ flowchart LR
     ALB -->|Dashboard traffic| Dashboard
     ALB -->|API routes| API
 
+    GitHub --> ECR
+    ECR --> Dashboard
+    ECR --> API
+    ECR --> MLflow
+
     Dashboard --> API
 
     API --> RDS
@@ -128,15 +133,6 @@ flowchart LR
 
     MLflow --> RDS
     MLflow --> S3
-
-    GitHub --> ECR
-    GitHub --> API
-    GitHub --> Dashboard
-
-    ECR --> API
-    ECR --> Dashboard
-    ECR --> MLflow
-```
 
 The system has one public entry point through the Application Load Balancer.
 
