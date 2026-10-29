@@ -92,7 +92,6 @@ It includes:
 The dashboard is served through an AWS Application Load Balancer and communicates with the FastAPI backend for both historical monitoring and live inference.
 
 ---
-
 ## Architecture
 
 ```mermaid
@@ -133,6 +132,7 @@ flowchart TD
 
     MLflow --> RDS
     MLflow --> S3
+```
 
 The system has one public entry point through the Application Load Balancer.
 
