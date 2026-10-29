@@ -1,61 +1,208 @@
 # MachineGuard
 
-MachineGuard is an end-to-end **predictive maintenance and MLOps platform** built using the NASA IMS Bearing Dataset.
+Production-oriented predictive maintenance system for bearing anomaly detection using vibration signals, machine learning, MLflow, FastAPI, Streamlit, Docker, and AWS.
 
-The project processes vibration signals from industrial bearings, extracts condition-monitoring features, detects abnormal machine behaviour with machine learning, and exposes the results through a production-style cloud architecture.
+![MachineGuard demo](docs/machineguard-demo.gif)
 
-MachineGuard includes the complete workflow from raw sensor data to a deployed monitoring dashboard:
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.14-blue">
+  <img src="https://img.shields.io/badge/FastAPI-API-009688">
+  <img src="https://img.shields.io/badge/MLflow-Tracking-0194E2">
+  <img src="https://img.shields.io/badge/AWS-ECS%20%7C%20RDS%20%7C%20S3-orange">
+  <img src="https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-black">
+</p>
 
-- vibration signal processing
-- feature engineering
-- anomaly detection
-- experiment and model tracking with MLflow
-- PostgreSQL persistence
-- REST API with FastAPI
-- interactive Streamlit dashboard
-- Docker containerization
+---
+
+## Overview
+
+MachineGuard is an end-to-end **predictive maintenance and MLOps platform** built on the NASA IMS Bearing Dataset.
+
+The system transforms raw vibration signals into engineered condition-monitoring features, detects abnormal machine behaviour with an Isolation Forest model, stores historical predictions in PostgreSQL, and exposes the results through a deployed monitoring dashboard.
+
+The project covers the complete machine-learning lifecycle:
+
+```text
+Raw vibration data
+→ signal processing
+→ feature extraction
+→ anomaly detection
+→ MLflow tracking
+→ PostgreSQL persistence
+→ FastAPI inference
+→ Streamlit monitoring
+→ Docker
+→ AWS deployment
+→ automated CI/CD
+```
+
+---
+
+## Why this project matters
+
+MachineGuard is not only a machine-learning experiment.
+
+It was designed as a complete production-oriented ML system, with particular focus on:
+
+- processing real industrial sensor data
+- separating training and inference
+- avoiding leakage when defining healthy training data
+- experiment and artifact tracking
+- database-backed monitoring
+- API-based model serving
+- containerized deployment
+- cloud networking
+- secrets and IAM management
 - automated testing
-- CI/CD with GitHub Actions
-- AWS deployment using ECS, ECR, RDS, S3, and an Application Load Balancer
+- automated deployment
+
+This makes the project closer to a real MLOps workflow than a standalone notebook-based model.
+
+---
+
+## Current deployment
+
+| Metric | Value |
+|---|---:|
+| Measurements processed | 2,156 |
+| Anomalous measurements | 826 |
+| Anomaly rate | 38.3% |
+| Minimum anomaly score | -0.2618 |
+| Model | Isolation Forest |
+| Database | PostgreSQL / Amazon RDS |
+| Deployment | AWS ECS |
+| CI/CD | GitHub Actions |
 
 ---
 
 ## Demo
 
-MachineGuard running end-to-end on AWS:
+The demo above shows the deployed MachineGuard system running end-to-end on AWS.
 
-![MachineGuard demo](docs/machineguard-demo.gif)
+It includes:
+
+- production dashboard
+- API connectivity
+- current bearing health
+- historical RMS evolution
+- anomaly-score evolution
+- period-level statistics
+- live anomaly prediction
+
+The dashboard is served through an AWS Application Load Balancer and communicates with the FastAPI backend for both historical monitoring and live inference.
 
 ---
 
-## Dashboard
+## Architecture
 
-The deployed dashboard provides:
+```mermaid
+flowchart LR
 
-- live bearing-condition prediction
-- current bearing health
-- anomaly scores
-- historical vibration monitoring
-- anomaly-rate statistics
-- date filtering
-- recent measurement inspection
+    User[Browser]
 
-Current production dataset:
+    ALB[Application Load Balancer]
 
-| Metric | Value |
-|---|---:|
-| Measurements | 2,156 |
-| Anomalous measurements | 826 |
-| Anomaly rate | 38.3% |
-| Minimum anomaly score | -0.2618 |
+    Dashboard[Streamlit Dashboard<br/>Amazon ECS]
 
-The historical plots show the evolution of vibration behaviour throughout the NASA IMS run-to-failure experiment.
+    API[FastAPI Service<br/>Amazon ECS]
+
+    MLflow[MLflow Server<br/>Amazon ECS]
+
+    RDS[(Amazon RDS<br/>PostgreSQL)]
+
+    S3[(Amazon S3<br/>MLflow Artifacts)]
+
+    ECR[Amazon ECR<br/>Docker Images]
+
+    GitHub[GitHub Actions]
+
+    User --> ALB
+
+    ALB -->|Dashboard traffic| Dashboard
+    ALB -->|API routes| API
+
+    Dashboard --> API
+
+    API --> RDS
+    API --> MLflow
+
+    MLflow --> RDS
+    MLflow --> S3
+
+    GitHub --> ECR
+    GitHub --> API
+    GitHub --> Dashboard
+
+    ECR --> API
+    ECR --> Dashboard
+    ECR --> MLflow
+```
+
+The system has one public entry point through the Application Load Balancer.
+
+---
+
+## Key engineering decisions
+
+### Healthy-only model training
+
+The anomaly detector is trained only on an initial time period assumed to represent healthy bearing behaviour.
+
+This prevents degraded observations from contaminating the definition of normal operating conditions.
+
+### Custom anomaly threshold
+
+Instead of using only the default Isolation Forest classification boundary, MachineGuard derives a threshold from the distribution of anomaly scores in healthy data.
+
+This provides a more interpretable decision boundary for the specific dataset.
+
+### API-first dashboard architecture
+
+The Streamlit dashboard does not access the production database directly.
+
+Historical data is retrieved through FastAPI:
+
+```text
+Streamlit
+    ↓
+GET /measurements
+    ↓
+FastAPI
+    ↓
+Amazon RDS
+```
+
+Live predictions follow:
+
+```text
+Streamlit
+    ↓
+POST /predict
+    ↓
+FastAPI
+    ↓
+MLflow model
+```
+
+This keeps the presentation layer separated from persistence and model-serving logic.
+
+### Immutable deployment images
+
+Docker images are tagged using the Git commit SHA in addition to `latest`.
+
+This makes each deployment traceable to an exact repository revision.
+
+### OIDC-based AWS authentication
+
+GitHub Actions authenticates to AWS using OpenID Connect.
+
+No permanent AWS access keys are stored in GitHub.
 
 ---
 
 ## Dataset
 
-MachineGuard uses the **NASA IMS Bearing Dataset**, a run-to-failure bearing dataset collected by the Center for Intelligent Maintenance Systems.
+MachineGuard uses the **NASA IMS Bearing Dataset**, a run-to-failure vibration dataset collected by the Center for Intelligent Maintenance Systems.
 
 The current implementation focuses on:
 
@@ -65,12 +212,12 @@ Bearing 4
 X-axis vibration
 ```
 
-Each raw file contains:
+Each raw observation contains:
 
 - 20,480 vibration samples
 - 20 kHz sampling frequency
 - measurements from multiple bearings and channels
-- timestamped observations collected throughout the experiment
+- timestamped files collected throughout the experiment
 
 The experiment covers:
 
@@ -78,13 +225,13 @@ The experiment covers:
 2003-10-22 → 2003-11-25
 ```
 
-Bearing 4 eventually developed a **roller defect**, making the dataset suitable for degradation monitoring and anomaly detection.
+Bearing 4 eventually developed a **roller defect**, making this sequence useful for studying progressive mechanical degradation.
 
 ---
 
 ## Signal processing
 
-Each raw vibration signal is transformed into a compact feature vector.
+Each raw vibration file is transformed into a compact feature vector.
 
 ### Time-domain features
 
@@ -103,7 +250,7 @@ The FFT spectrum is used to calculate:
 - dominant frequency
 - spectral energy
 
-Each raw vibration file therefore becomes one structured observation:
+Each vibration file therefore becomes one structured measurement:
 
 ```text
 timestamp
@@ -116,7 +263,7 @@ dominant_frequency
 spectral_energy
 ```
 
-This converts the original high-dimensional signal into features suitable for machine learning, persistence, and monitoring.
+This reduces a raw high-dimensional vibration signal into features suitable for machine learning, storage, and monitoring.
 
 ---
 
@@ -124,16 +271,17 @@ This converts the original high-dimensional signal into features suitable for ma
 
 The primary model is an **Isolation Forest**.
 
-The model is trained only on an initial period assumed to represent healthy machine behaviour:
+The healthy training period is defined using the cutoff:
 
 ```text
-Healthy training cutoff:
-2003-11-15
+timestamp <= 2003-11-15
 ```
 
-Features are standardized using `StandardScaler` before training.
+This produces 969 samples for model training.
 
-Main configuration:
+Before training, the features are standardized using `StandardScaler`.
+
+Main model configuration:
 
 ```text
 Model: Isolation Forest
@@ -142,19 +290,35 @@ contamination: auto
 random_state: 42
 ```
 
-MachineGuard uses a custom anomaly threshold estimated from healthy data:
+The custom anomaly threshold is:
 
 ```text
 -0.06108184766069839
 ```
 
-A measurement is classified as anomalous when:
+The threshold corresponds to the lower tail of healthy anomaly scores.
+
+A measurement is considered anomalous when:
 
 ```text
 anomaly_score < threshold
 ```
 
-This provides both:
+Example healthy observation:
+
+```text
+anomaly_score = -0.0143
+anomaly = false
+```
+
+Example degraded observation:
+
+```text
+anomaly_score = -0.2136
+anomaly = true
+```
+
+This gives the system both:
 
 - a continuous anomaly score
 - a binary anomaly flag
@@ -165,24 +329,27 @@ This provides both:
 
 MachineGuard uses **MLflow** for experiment tracking and model management.
 
-The logged inference pipeline contains:
+The tracked inference pipeline contains:
 
 - Isolation Forest model
 - fitted `StandardScaler`
 - anomaly threshold
-- run metadata and parameters
+- run metadata
+- model parameters
 
-The production inference service retrieves the latest completed model run and loads the corresponding artifacts.
+The FastAPI service retrieves the latest completed model run and loads the corresponding artifacts.
 
-In AWS:
+In the AWS deployment:
 
 ```text
-MLflow tracking server
-        ↓
-Amazon RDS PostgreSQL
-        +
-Amazon S3 artifact storage
+MLflow server
+    ↓
+Amazon RDS
+    +
+Amazon S3
 ```
+
+Amazon RDS is used as the MLflow backend store, while S3 stores model artifacts.
 
 MLflow itself runs as an ECS service.
 
@@ -190,9 +357,14 @@ MLflow itself runs as an ECS service.
 
 ## Database
 
-MachineGuard uses PostgreSQL to persist bearing metadata, extracted features, and prediction results.
+MachineGuard uses PostgreSQL to persist:
 
-Main application tables:
+- bearing metadata
+- extracted signal features
+- anomaly scores
+- anomaly flags
+
+The main application tables are:
 
 ```text
 bearings
@@ -216,7 +388,7 @@ anomaly_flag
 
 The production database runs on **Amazon RDS for PostgreSQL**.
 
-The complete historical dataset contains:
+The complete historical sequence currently contains:
 
 ```text
 2,156 measurements
@@ -227,7 +399,7 @@ The complete historical dataset contains:
 
 ## FastAPI service
 
-MachineGuard exposes model inference and historical data through FastAPI.
+MachineGuard exposes model inference and historical measurements through FastAPI.
 
 ### Health check
 
@@ -250,7 +422,11 @@ Example response:
 GET /measurements
 ```
 
-Returns historical feature values together with anomaly scores and flags stored in AWS RDS.
+Returns stored measurements together with:
+
+- extracted features
+- anomaly score
+- anomaly flag
 
 ### Prediction
 
@@ -272,102 +448,62 @@ Example request:
 }
 ```
 
-Example response:
+The API returns the anomaly score and classification produced by the loaded model.
 
-```json
-{
-  "anomaly_score": -0.2124,
-  "anomaly_flag": true,
-  "status": "ANOMALOUS"
-}
-```
-
-The model pipeline is cached after its first load so repeated prediction requests do not reload the model unnecessarily.
+The inference pipeline is cached after the first load so repeated requests do not reload the MLflow model unnecessarily.
 
 ---
 
 ## Streamlit dashboard
 
-The Streamlit dashboard communicates with FastAPI instead of connecting directly to the production database.
+The dashboard provides:
 
-Historical monitoring follows:
+- current bearing condition
+- live prediction
+- anomaly-score visualization
+- RMS trend visualization
+- anomaly statistics
+- date filtering
+- recent measurements
 
-```text
-Streamlit
-    ↓
-GET /measurements
-    ↓
-FastAPI
-    ↓
-Amazon RDS
-```
-
-Live inference follows:
-
-```text
-Streamlit
-    ↓
-POST /predict
-    ↓
-FastAPI
-    ↓
-MLflow model
-```
-
-This keeps the presentation layer separated from model-serving and database infrastructure.
+The dashboard communicates entirely through the FastAPI service rather than directly accessing the production database.
 
 ---
 
-## AWS architecture
+## AWS deployment
 
-The production system is deployed on AWS.
+The production architecture uses several AWS services.
 
-```mermaid
-flowchart TD
+### Amazon ECS
 
-    User[Browser]
+Three containerized services run on ECS:
 
-    ALB[Application Load Balancer]
-
-    Dashboard[Streamlit Dashboard<br/>Amazon ECS]
-
-    API[FastAPI Service<br/>Amazon ECS]
-
-    MLflow[MLflow Server<br/>Amazon ECS]
-
-    RDS[(Amazon RDS<br/>PostgreSQL)]
-
-    S3[(Amazon S3<br/>MLflow Artifacts)]
-
-    ECR[Amazon ECR<br/>Docker Images]
-
-    GitHub[GitHub Actions]
-
-    User --> ALB
-
-    ALB -->|Default traffic| Dashboard
-    ALB -->|API routes| API
-
-    Dashboard --> API
-
-    API --> MLflow
-    API --> RDS
-
-    MLflow --> RDS
-    MLflow --> S3
-
-    GitHub --> ECR
-    GitHub --> API
-    GitHub --> Dashboard
-
-    ECR --> API
-    ECR --> Dashboard
-    ECR --> MLflow
+```text
+machineguard-api-service
+machineguard-dashboard-service
+machineguard-mlflow-service
 ```
 
-### Application Load Balancer routing
+### Amazon ECR
 
-The ALB separates dashboard traffic from API traffic.
+Docker images are stored in Amazon Elastic Container Registry.
+
+The same MachineGuard image can run different components by using different ECS commands.
+
+### Amazon RDS
+
+PostgreSQL stores both:
+
+- MachineGuard application data
+- MLflow backend metadata
+
+### Amazon S3
+
+S3 stores MLflow artifacts such as trained models.
+
+### Application Load Balancer
+
+The ALB routes requests based on path.
 
 ```text
 /health
@@ -383,25 +519,25 @@ everything else
         → Streamlit
 ```
 
-The ECS application ports are not exposed directly to the internet.
+### Security groups
 
 The ECS security group allows:
 
 ```text
 5000 → internal ECS communication
-8000 → Application Load Balancer only
-8501 → Application Load Balancer only
+8000 → Application Load Balancer
+8501 → Application Load Balancer
 ```
+
+The API and dashboard application ports are therefore not exposed directly to the internet.
 
 ---
 
 ## Containerization
 
-The application is packaged with Docker.
+MachineGuard is packaged using Docker.
 
-A single MachineGuard image contains the Python package and application dependencies.
-
-Different ECS services reuse the same image with different commands.
+The same application image is reused for multiple services.
 
 ### FastAPI
 
@@ -421,42 +557,42 @@ streamlit run src/machineguard/dashboard/app.py \
 
 ### MLflow
 
-MLflow is also deployed as an ECS service and uses:
+MLflow runs as a dedicated ECS service with:
 
-- Amazon RDS as its backend store
-- Amazon S3 for model artifacts
+- PostgreSQL backend store
+- S3 artifact storage
 
-This architecture allows the main application components to be deployed and managed independently.
+This keeps deployment consistent while allowing the services to operate independently.
 
 ---
 
 ## CI/CD
 
-MachineGuard uses **GitHub Actions** for automated testing and deployment.
+MachineGuard uses GitHub Actions for both continuous integration and continuous deployment.
 
 ### Continuous integration
 
-On pushes to `main` and pull requests, the test workflow runs the Python test suite.
+The test workflow runs the Python test suite automatically.
 
 Current tests cover:
 
 - FastAPI behaviour
 - feature extraction
-- frequency-domain feature computation
-- time-domain feature computation
+- time-domain processing
+- frequency-domain processing
 
-The current test suite contains:
+Current test result:
 
 ```text
-14 passing tests
+14 passed
 ```
 
 ### Continuous deployment
 
-After changes are pushed to `main`, GitHub Actions:
+Changes pushed to `main` trigger the deployment workflow.
 
 ```text
-Checkout source
+Checkout repository
       ↓
 Authenticate to AWS using OIDC
       ↓
@@ -464,25 +600,23 @@ Build ARM64 Docker image
       ↓
 Push image to Amazon ECR
       ↓
-Render new FastAPI task definition
+Render new API task definition
       ↓
 Deploy FastAPI ECS service
       ↓
-Render new Streamlit task definition
+Render new dashboard task definition
       ↓
 Deploy Streamlit ECS service
 ```
 
-Docker images are tagged using both:
+Each image is tagged with:
 
 ```text
 latest
-Git commit SHA
+<git-commit-sha>
 ```
 
-This allows deployed images to be associated with exact source-code revisions.
-
-AWS authentication uses **GitHub OIDC and IAM roles**, so permanent AWS access keys do not need to be stored as GitHub secrets.
+This makes deployments reproducible and traceable.
 
 ---
 
@@ -498,6 +632,9 @@ machineguard/
 ├── data/
 │   ├── raw/
 │   └── processed/
+│
+├── docs/
+│   └── machineguard-demo.gif
 │
 ├── notebooks/
 │   ├── 01_data_exploration.ipynb
@@ -516,8 +653,7 @@ machineguard/
 │       │
 │       ├── data/
 │       │   ├── ingestion.py
-│       │   ├── load_processed.py
-│       │   └── replay.py
+│       │   └── load_processed.py
 │       │
 │       ├── database/
 │       │   ├── connection.py
@@ -584,115 +720,77 @@ uvicorn machineguard.api.main:app \
 streamlit run src/machineguard/dashboard/app.py
 ```
 
-Docker Compose can also be used to start the local development environment containing PostgreSQL, MLflow, FastAPI, and Streamlit.
+Docker Compose can also be used for the local PostgreSQL, MLflow, API, and dashboard environment.
 
 ---
 
 ## Technologies
 
-### Machine learning and signal processing
-
-- Python
-- NumPy
-- pandas
-- SciPy
-- scikit-learn
-
-### MLOps and backend
-
-- MLflow
-- FastAPI
-- PostgreSQL
-- psycopg
-- Pydantic
-
-### Visualization
-
-- Streamlit
-- Altair
-- Matplotlib
-
-### Infrastructure
-
-- Docker
-- Amazon ECS
-- AWS Fargate
-- Amazon ECR
-- Amazon RDS
-- Amazon S3
-- Application Load Balancer
-- AWS IAM
-- AWS Secrets Manager
-- Amazon CloudWatch
-
-### CI/CD
-
-- GitHub Actions
-- GitHub OIDC
-- pytest
+| Area | Technologies |
+|---|---|
+| Machine learning | scikit-learn |
+| Signal processing | NumPy, SciPy |
+| Data processing | pandas |
+| Model tracking | MLflow |
+| API | FastAPI, Pydantic |
+| Database | PostgreSQL, psycopg |
+| Dashboard | Streamlit, Altair |
+| Containers | Docker |
+| Cloud | AWS ECS, ECR, RDS, S3, ALB |
+| Security | IAM, Secrets Manager, OIDC |
+| CI/CD | GitHub Actions |
+| Testing | pytest |
 
 ---
 
-## Engineering goals
+## What I learned
 
-MachineGuard was designed not only as an anomaly-detection experiment, but as an exercise in building a complete production-oriented machine-learning system.
+Building MachineGuard required working across the full ML system rather than focusing only on model accuracy.
 
-The project demonstrates:
+The project involved:
 
-- processing real industrial sensor data
-- designing reusable signal-processing pipelines
-- feature engineering
-- separating training and inference
-- avoiding data leakage during anomaly-model training
-- model artifact management
-- database-backed applications
-- REST API design
-- interactive monitoring dashboards
-- Docker containerization
-- cloud networking
-- IAM and secrets management
-- automated testing
-- CI/CD
-- production debugging across multiple distributed services
+- understanding vibration data
+- extracting physically meaningful features
+- defining a healthy training regime
+- designing an anomaly-detection pipeline
+- tracking models and artifacts
+- designing database schemas
+- building REST APIs
+- creating dashboards
+- debugging Docker containers
+- configuring AWS networking
+- managing IAM permissions
+- using Secrets Manager
+- configuring ECS services and load balancing
+- implementing GitHub Actions CI/CD
+- debugging production deployment failures
+
+The main challenge was integrating all these components into one reliable workflow.
 
 ---
 
 ## Future improvements
 
-Potential extensions include:
+Possible extensions include:
 
 - `NORMAL`, `DEGRADING`, and `CRITICAL` health stages
 - Remaining Useful Life estimation
-- additional NASA IMS bearings and experiments
-- real-time sensor streaming
-- drift monitoring
+- additional NASA IMS bearings
+- streaming sensor ingestion
+- model-drift detection
 - automated retraining
 - CloudWatch alarms
-- HTTPS and a custom domain
+- HTTPS and custom domain
 - private ECS subnets
+- ECS auto-scaling
 - API pagination
-- auto-scaling
-- comparison with autoencoders and other anomaly-detection methods
+- comparison with autoencoders
 - richer operational alerting
 
 ---
 
 ## Status
 
-**End-to-end system deployed successfully.**
+**End-to-end system successfully deployed.**
 
-Current workflow:
-
-```text
-Raw vibration data
-→ signal processing
-→ feature extraction
-→ anomaly detection
-→ MLflow tracking
-→ PostgreSQL persistence
-→ FastAPI inference
-→ Streamlit monitoring
-→ Docker
-→ AWS deployment
-→ automated CI/CD
-```
+MachineGuard currently supports the complete pipeline from raw vibration data to a cloud-hosted monitoring application with automated CI/CD.
